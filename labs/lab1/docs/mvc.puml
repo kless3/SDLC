@@ -1,0 +1,127 @@
+@startuml
+title Glycemic Index Application - Active Model MVC
+!pragma layout smetana
+left to right direction
+
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+
+package "Model" {
+  enum GlycemicCategory {
+    LOW
+    MEDIUM
+    HIGH
+    --
+    - displayName : String
+    + {static} fromIndex(index : int) : GlycemicCategory
+    + toString() : String
+  }
+
+  class ProductInput <<record>> {
+    - productName : String
+    + productName() : String
+  }
+
+  class ProductInfo <<record>> {
+    - displayName : String
+    - glycemicIndex : int
+    - category : GlycemicCategory
+    + displayName() : String
+    + glycemicIndex() : int
+    + category() : GlycemicCategory
+  }
+
+  class GlycemicState <<record>> {
+    - input : ProductInput
+    - result : ProductInfo
+    + input() : ProductInput
+    + result() : ProductInfo
+    + {static} empty() : GlycemicState
+    + hasResult() : boolean
+  }
+
+  class ValidationException {
+    - {static} serialVersionUID : long
+    + ValidationException(message : String)
+  }
+
+  class GlycemicIndexModel {
+    + {static} STATE_PROPERTY : String
+    - {static} MIN_NAME_LENGTH : int
+    - {static} MAX_NAME_LENGTH : int
+    - {static} PRODUCTS : Map<String, ProductInfo>
+    - changeSupport : PropertyChangeSupport
+    - state : GlycemicState
+    --
+    + getState() : GlycemicState
+    + getLastInput() : Optional<ProductInput>
+    + findProduct(rawName : String) : void
+    + addPropertyChangeListener(listener : PropertyChangeListener) : void
+    + removePropertyChangeListener(listener : PropertyChangeListener) : void
+    - updateState(newState : GlycemicState) : void
+  }
+}
+
+package "View" {
+  class MainView {
+    - {static} serialVersionUID : long
+    - productArea : JTextArea
+    - resultArea : JTextArea
+    - inputButton : JButton
+    --
+    + MainView()
+    + onInputRequested(listener : ActionListener) : void
+    + open() : void
+    + showError(owner : Component, message : String) : void
+    + render(state : GlycemicState) : void
+    + propertyChange(event : PropertyChangeEvent) : void
+  }
+
+  class InputDialog {
+    - {static} serialVersionUID : long
+    - productField : JTextField
+    - submitButton : JButton
+    --
+    + InputDialog(owner : Frame, previousInput : ProductInput)
+    + getProductName() : String
+    + onSubmit(action : Runnable) : void
+    + open() : void
+    + close() : void
+  }
+}
+
+package "Controller" {
+  class GlycemicIndexController {
+    - model : GlycemicIndexModel
+    - view : MainView
+    --
+    + GlycemicIndexController(model : GlycemicIndexModel, view : MainView)
+    + start() : void
+    - openInputDialog() : void
+  }
+}
+
+class App {
+  + {static} main(args : String[]) : void
+  - {static} useSystemLookAndFeel() : void
+}
+
+interface PropertyChangeListener {
+  + propertyChange(event : PropertyChangeEvent) : void
+}
+
+App ..> GlycemicIndexModel : creates
+App ..> MainView : creates
+App ..> GlycemicIndexController : creates
+GlycemicIndexController --> GlycemicIndexModel : commands
+GlycemicIndexController --> MainView : handles actions
+GlycemicIndexController ..> InputDialog : opens
+GlycemicIndexModel *-- GlycemicState : stores
+GlycemicState o-- ProductInput : contains
+GlycemicState o-- ProductInfo : contains
+ProductInfo --> GlycemicCategory : classifies
+GlycemicIndexModel ..> ValidationException : throws
+MainView ..|> PropertyChangeListener
+GlycemicIndexModel ..> PropertyChangeListener : notifies
+
+@enduml
